@@ -1,5 +1,4 @@
 'use strict';
-
 /*const { shell, app } = require('electron');
 let { exec } = require('child_process');
 const color = require('color');
@@ -46,49 +45,48 @@ const navigation = {
   }
 };*/
 
-const LEAD_KEY = 'CommandOrControl+Shift'//process.platform === 'darwin' ? 'Cmd' : 'Ctrl';
+const LEAD_KEY = 'CommandOrControl+Shift'; //process.platform === 'darwin' ? 'Cmd' : 'Ctrl';
 
-exports.decorateMenu = (menu) =>
-  menu.map(
-    item => {
-      if (item.label !== 'Plugins') return item;
-      const newItem = Object.assign({}, item);
+exports.decorateMenu = menu => menu.map(item => {
+  if (item.label !== 'Plugins') return item;
+  const newItem = Object.assign({}, item);
+  newItem.submenu = newItem.submenu.concat({
+    label: 'Quick SSH',
+    type: 'submenu',
+    submenu: [{
+      label: 'Show/Hide List',
+      accelerator: "".concat(LEAD_KEY, "+O"),
+      click: (clickedItem, focusedWindow) => {
+        console.log("yes");
 
-      newItem.submenu = newItem.submenu.concat(
-        {
-          label: 'Quick SSH',
-          type: 'submenu',
-          submenu:[
-            {
-              label: 'Show/Hide List',
-              accelerator: `${LEAD_KEY}+O`,
-              click: (clickedItem, focusedWindow) => {
-                console.log("yes");
-                if (focusedWindow !== null) {
-                  focusedWindow.rpc.emit('hyper-quickssh:open:window', { focusedWindow });
-                }
-              }
-            },
-            {
-              label: 'Open Config',
-              click: (clickedItem, focusedWindow) => {
-                if (focusedWindow !== null) {
-                  focusedWindow.rpc.emit('hyper-quickssh:open:config', { focusedWindow });
-                }
-              }
-            }
-          ],
-        });
-      return newItem;
-    }
-  );
+        if (focusedWindow !== null) {
+          focusedWindow.rpc.emit('hyper-quickssh:open:window', {
+            focusedWindow
+          });
+        }
+      }
+    }, {
+      label: 'Open Config',
+      click: (clickedItem, focusedWindow) => {
+        if (focusedWindow !== null) {
+          focusedWindow.rpc.emit('hyper-quickssh:open:config', {
+            focusedWindow
+          });
+        }
+      }
+    }]
+  });
+  return newItem;
+});
 
-
-const SSHUI = require('./src/ui.js');
+const SSHUI = require('./lib/ui.js');
 
 let eventDispatch = {};
 
-exports.decorateHyper = (Hyper, {React}) => {
+exports.decorateHyper = (Hyper, _ref) => {
+  let {
+    React
+  } = _ref;
   return class extends React.Component {
     constructor(props) {
       super(props);
@@ -100,22 +98,21 @@ exports.decorateHyper = (Hyper, {React}) => {
         result: quicksshEntries
       }*/
     }
-/*    handleClick(e) { }
-    handlePrefsClick(e){
-      openFilePrefs(e);
-    }*/
+    /*    handleClick(e) { }
+        handlePrefsClick(e){
+          openFilePrefs(e);
+        }*/
+
+
     render() {
       //const color = require('color');
       //const { cursor } = this.state;
       //this.state.results = quicksshEntries;
-
-      return (
-        React.createElement(Hyper, Object.assign({}, this.props, {
-          customChildren:
-            SSHUI(React, eventDispatch)
-        }))
-      )
+      return React.createElement(Hyper, Object.assign({}, this.props, {
+        customChildren: SSHUI(React, eventDispatch)
+      }));
     }
+
   };
 };
 
@@ -128,7 +125,8 @@ function waitFor(object, key, fn) {
 }
 
 exports.onWindow = win => {
-  win.rpc.on('hyper-ssh_execute-commands', ([uid, commands]) => {
+  win.rpc.on('hyper-ssh_execute-commands', (_ref2) => {
+    let [uid, commands] = _ref2;
     commands.forEach(cmd => {
       win.sessions.get(uid).write(cmd + '\r');
     });
@@ -138,12 +136,11 @@ exports.onWindow = win => {
 exports.onRendererWindow = win => {
   waitFor(win, 'rpc', rpc => {
     rpc.on('session add', details => {
-      const { uid } = details;
+      const {
+        uid
+      } = details;
       eventDispatch['rpc'] = rpc;
       eventDispatch['uid'] = uid;
     });
   });
-};
-
-
-//https://github.com/curz46/hyper-startup/blob/master/index.js
+}; //https://github.com/curz46/hyper-startup/blob/master/index.js

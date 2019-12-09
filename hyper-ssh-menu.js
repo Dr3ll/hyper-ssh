@@ -50,7 +50,7 @@ exports.decorateHyper = (Hyper, _ref) => {
 
     render() {
       return React.createElement(Hyper, Object.assign({}, this.props, {
-        customChildren: SSHUI(React, eventDispatch, sshMenuConfig)
+        customChildren: SSHUI(React, eventDispatch, sshMenuConfig, saveConfig)
       }));
     }
 

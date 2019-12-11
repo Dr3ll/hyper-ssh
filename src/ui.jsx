@@ -19,23 +19,13 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
   };
 
   const sliceStyle = {
-    padding: '5px'
+    paddingTop: '5px',
+    paddingBottom: '5px'
   };
 
-  const addButtonStyle = {
-    height: '25px',
-    width: '25px',
-    padding: '5px',
-    background: 'rgba(255, 155, 155, .5)',
-    border: '0',
-    color: 'white'
-  };
-
-  const setupButtonStyle = {
-    padding: '5px',
-    background: 'rgba(255, 155, 155, .5)',
-    border: '0',
-    color: 'white'
+  const sliceFormStyle = {
+    paddingTop: '2px',
+    paddingBottom: '2px'
   };
 
   const setups = sshMenuConfig && sshMenuConfig.sshSetups ? sshMenuConfig.sshSetups : [];
@@ -53,16 +43,25 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
 
   const UIBase = () => {
     let [uiState, setUIState] = React.useState({ mode: UIState.LIST });
+    let [uiToggle, setUIToggle] = React.useState(false);
+
+    const toggleUI = () => {
+      setUIToggle(!uiToggle);
+    };
+
+    rpc.on('hyper-ssh-menu_openList', () => {
+      toggleUI();
+    });
 
     const updateUIState = (draft) => {
       setUIState(Object.assign({}, uiState, draft));
     };
 
-    return <div class='hyper-putty-base'>
+    return <div style={{display: uiToggle ?'block' : 'none'}} className='hyper-ssh-menu-base'>
       { uiState.mode === UIState.LIST &&
       <>
         <div style={sliceStyle}>
-          <button style={addButtonStyle} onClick={() => {
+          <button className='hyper-ssh-menu-add-button' onClick={() => {
             updateUIState({ mode: UIState.NEW_SETUP});
           }}>
             +
@@ -85,32 +84,9 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
       ;
   };
 
-  const CmdButton = ({cmds, label, style}) => {
-
-    if (style === undefined) {
-      style = {};
-    }
-
-    const postCmds = () => {
-      if (cmds !== undefined && cmds.length > 0) {
-        rpc.emit('hyper-ssh_execute-commands', [eventDispatch.uid, cmds]);
-      }
-    };
-
-    return <>
-      <button
-        style={style}
-        onClick={postCmds}
-      >{label}</button>
-    </>
-      ;
-  };
-
   const NewSetupForm = ({updateUI}) => {
 
-    const newSetup = {
-      id: uuidv4()
-    };
+    const newSetup = { id: uuidv4() };
     const [tunnelForms, setTunnels] = React.useState([]);
     const labelForm = React.useRef(null);
     const hostForm = React.useRef(null);
@@ -174,10 +150,10 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
         for (let tunnel of tunnelForms) {
           if (tunnel.remotePort && tunnel.remoteHost && tunnel.remoteHost) {
             tunnels.push({
-                remotePort: tunnel.remotePort,
-                localPort: tunnel.localPort,
-                remoteHost: tunnel.remoteHost
-              })
+              remotePort: tunnel.remotePort,
+              localPort: tunnel.localPort,
+              remoteHost: tunnel.remoteHost
+            })
           }
         }
         newSetup.tunnels = tunnels;
@@ -188,38 +164,46 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
       updateUI({ mode: UIState.LIST });
     };
 
-    return <div>
-      <div>
+    return <div className='hyper-ssh-menu-form'>
+      <div style={sliceFormStyle}>
         <label>Label</label>
         <input ref={labelForm}/>
       </div>
-      <div>
+      <div style={sliceFormStyle}>
         <label>Host</label>
         <input ref={hostForm}/>
       </div>
-      <div>
+      <div style={sliceFormStyle}>
         <label>User</label>
         <input ref={userForm}/>
       </div>
-      <div>
+      <div style={{ paddingTop: '10px' }}>
+        {tunnelForms.length > 0 && <div style={{ marginBottom: '-5px' }}>Tunnels</div>}
         {
           tunnelForms.map((tunnel) =>
-            <div key={tunnel.id} style={sliceStyle}>
-              <label>Source port</label>
-              <input id={tunnel.id} onChange={handleTunnelLPChange} />
-              <label>Destination</label>
-              <input id={tunnel.id} onChange={handleTunnelRHChange}/>
-              <label>Destination port</label>
-              <input id={tunnel.id} onChange={handleTunnelRPChange}/>
+            <div style={{ paddingTop: '5px', paddingBottom: '5px' }} key={tunnel.id}>
+              <div style={sliceFormStyle}>
+                <label>Source port</label>
+                <input id={tunnel.id} onChange={handleTunnelLPChange} />
+              </div>
+              <div style={sliceFormStyle}>
+                <label>Destination</label>
+                <input id={tunnel.id} onChange={handleTunnelRHChange}/>
+              </div>
+              <div style={sliceFormStyle}>
+                <label>Dest. port</label>
+                <input id={tunnel.id} onChange={handleTunnelRPChange}/>
+              </div>
             </div>
           )
         }
       </div>
-      <div>
-        <button onClick={addTunnel}>Add tunnel</button>
+      <div style={Object.assign({ display: 'flex', justifyContent: 'flex-end', paddingRight: '2px' }, sliceStyle)}>
+        <button className='hyper-ssh-menu-button' style={{ width: '180px' }} onClick={addTunnel} title='Add SSH connection'>Add tunnel</button>
       </div>
-      <div>
-        <button onClick={saveSetup}>Done</button>
+      <div style={sliceStyle}>
+        <button className='hyper-ssh-menu-button' onClick={saveSetup}>Done</button>&nbsp;
+        <button className='hyper-ssh-menu-button' onClick={() => {updateUI({ mode: UIState.LIST })}}>Cancel</button>
       </div>
     </div>
       ;
@@ -252,13 +236,36 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
     }
 
     return <div style={setupStyle}>
+      <div style={{width: '70%'}}>
+        {sshSetup.label}
+      </div>
       <CmdButton
-        style={setupButtonStyle}
         cmds={cmds}
-        label={sshSetup.label}
+        label={'Open'}
+      />
+      <CmdButton
+        cmds={cmds}
+        label={'Open New'}
       />
     </div>
       ;
   };
+
+  const CmdButton = ({cmds, label}) => {
+    const postCmds = () => {
+      if (cmds !== undefined && cmds.length > 0) {
+        rpc.emit('hyper-ssh_execute-commands', [eventDispatch.uid, cmds]);
+      }
+    };
+
+    return <>
+      <div
+        className='hyper-ssh-menu-setup'
+        onClick={postCmds}
+      >{label}</div>
+    </>
+      ;
+  };
+
   return render();
 };

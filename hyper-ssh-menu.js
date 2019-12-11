@@ -6,6 +6,14 @@ const [loadConfig, saveConfig] = require('./lib/loadConfig');
 const MOD_KEY = 'CommandOrControl+Shift'; //process.platform === 'darwin' ? 'Cmd' : 'Ctrl';
 
 const sshMenuConfig = loadConfig();
+let eventDispatch = {};
+let storeHandle;
+
+function newSession() {
+  /*storeHandle.dispatch({
+    type: 'SESSION_ADD'
+    });*/
+}
 
 exports.decorateMenu = menu => menu.map(item => {
   if (item.label !== 'Plugins') return item;
@@ -18,16 +26,7 @@ exports.decorateMenu = menu => menu.map(item => {
       accelerator: "".concat(MOD_KEY, "+O"),
       click: (clickedItem, focusedWindow) => {
         if (focusedWindow !== null) {
-          focusedWindow.rpc.emit('hyper-quickssh:open:window', {
-            focusedWindow
-          });
-        }
-      }
-    }, {
-      label: 'Open Config',
-      click: (clickedItem, focusedWindow) => {
-        if (focusedWindow !== null) {
-          focusedWindow.rpc.emit('hyper-quickssh:open:config', {
+          focusedWindow.rpc.emit('hyper-ssh-menu_openList', {
             focusedWindow
           });
         }
@@ -37,22 +36,59 @@ exports.decorateMenu = menu => menu.map(item => {
   return newItem;
 });
 
-let eventDispatch = {};
-
 exports.decorateConfig = (config) => {
+
+  const primaryColor = 'rgba(255, 155, 155, .5)';
+
   return Object.assign({}, config,
     {
       css: `
-      .hyper-putty-base {
-        position: absolute;
-        top: 34px;
-        bottom: 0;
-        right: 0;
-        width: 300px;
-        background: rgba(255, 255, 255, .04);
-        font-family: ${config.fontFamily};
+      .hyper-ssh-menu-base {
+          color: ${config.foregroundColor};
+          position: absolute;
+          padding: 5px;
+          top: 34px;
+          font-size: 13.3333333px;
+          bottom: 0;
+          right: 0;
+          width: 300px;
+          background: rgba(255, 255, 255, .04);
+          font-family: ${config.fontFamily};
       }
-      
+      .hyper-ssh-menu-form label {
+          width: 108px;
+          display: inline-block;
+      }
+      .hyper-ssh-menu-form input {
+          width: 180px;
+          display: inline-block;
+          padding: 2px 5px;
+          color: ${config.foregroundColor};
+          background: rgba(255,255,255,.1);
+          border: 1px solid ${primaryColor};
+      }
+      .hyper-ssh-menu-setup {
+          padding: 5px;
+          height: 40px;
+          background: ${primaryColor};
+          border: 0;
+          color: ${config.foregroundColor};
+      }
+      .hyper-ssh-menu-add-button {
+          height: 25px;
+          width: 25px;
+          padding: 5px;
+          background: ${primaryColor};
+          border: 0;
+          color: ${config.foregroundColor};
+      }
+      .hyper-ssh-menu-button {
+          height: 25px;
+          padding: 5px;
+          background: ${primaryColor};
+          border: 0;
+          color: ${config.foregroundColor};
+      }
   `}
   );
 };
@@ -106,6 +142,7 @@ exports.onRendererWindow = win => {
 
 exports.middleware = (store) => (next) => (action) => {
 
+  storeHandle = store;
   const uids = store.getState().sessions.sessions;
   switch (action.type) {
     case 'SESSION_USER_DATA':

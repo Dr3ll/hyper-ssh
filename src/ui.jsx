@@ -1,52 +1,5 @@
 "use strict";
 
-const baseStyle = {
-  position: 'absolute',
-  top: '34px',
-  bottom: '0',
-  right: '0',
-  width: '300px',
-  background: 'rgba(255, 255, 255, .04)'
-};
-
-const setupStyle = {
-  height: '60py'
-};
-
-const sliceStyle = {
-  padding: '5px'
-};
-
-const addButtonStyle = {
-  height: '25px',
-  width: '25px',
-  padding: '5px',
-  background: 'rgba(255, 155, 155, .5)',
-  border: '0',
-  color: 'white'
-};
-
-const setupButtonStyle = {
-  padding: '5px',
-  background: 'rgba(255, 155, 155, .5)',
-  border: '0',
-  color: 'white'
-};
-
-/*{
-hostname:
-port: 22
-username: root
-IPv4
-IPv6
-
-Tunnel
-param: -L 9999:127.0.0.1:80 user@remoteserver
-localPort:
-remoteAddress: localhost
-remotePort:
-}*/
-
 const UIState = {
   LIST: 1,
   NEW_SETUP: 2
@@ -60,6 +13,30 @@ function uuidv4() {
 }
 
 module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
+
+  const setupStyle = {
+    height: '60py'
+  };
+
+  const sliceStyle = {
+    padding: '5px'
+  };
+
+  const addButtonStyle = {
+    height: '25px',
+    width: '25px',
+    padding: '5px',
+    background: 'rgba(255, 155, 155, .5)',
+    border: '0',
+    color: 'white'
+  };
+
+  const setupButtonStyle = {
+    padding: '5px',
+    background: 'rgba(255, 155, 155, .5)',
+    border: '0',
+    color: 'white'
+  };
 
   const setups = sshMenuConfig && sshMenuConfig.sshSetups ? sshMenuConfig.sshSetups : [];
 
@@ -81,7 +58,7 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
       setUIState(Object.assign({}, uiState, draft));
     };
 
-    return <div style={baseStyle}>
+    return <div class='hyper-putty-base'>
       { uiState.mode === UIState.LIST &&
       <>
         <div style={sliceStyle}>
@@ -134,17 +111,57 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
     const newSetup = {
       id: uuidv4()
     };
-    const tunnelForms = [];
+    const [tunnelForms, setTunnels] = React.useState([]);
     const labelForm = React.useRef(null);
     const hostForm = React.useRef(null);
     const userForm = React.useRef(null);
 
     const addTunnel = () => {
       tunnelForms.push({
-        localPort: React.useRef(null),
-        remotePort: React.useRef(null),
-        remoteHost: React.useRef(null)
-      })
+        id: tunnelForms.length.toString(),
+        localPort: '',
+        remotePort: '',
+        remoteHost: ''
+      });
+      setTunnels([...tunnelForms]);
+    };
+
+    const validatePort = (draft, old) => {
+      if (draft === undefined || draft === '') {
+        return '';
+      }
+      draft = parseInt(draft);
+      if (draft > 0 && draft <= 65535) {
+        return draft / 1;
+      }
+      return old;
+    };
+
+    const handleTunnelRPChange = ({target}) => {
+      for (let t of tunnelForms) {
+        if (t.id === target.id) {
+          t.remotePort = validatePort(target.value, t.remotePort);
+          target.value = t.remotePort;
+          break;
+        }
+      }
+    };
+    const handleTunnelRHChange = ({target}) => {
+      for (let t of tunnelForms) {
+        if (t.id === target.id) {
+          t.remoteHost = target.value;
+          break;
+        }
+      }
+    };
+    const handleTunnelLPChange = ({target}) => {
+      for (let t of tunnelForms) {
+        if (t.id === target.id) {
+          t.localPort = validatePort(target.value, t.localPort);
+          target.value = t.localPort;
+          break;
+        }
+      }
     };
 
     const saveSetup = () => {
@@ -157,12 +174,13 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
         for (let tunnel of tunnelForms) {
           if (tunnel.remotePort && tunnel.remoteHost && tunnel.remoteHost) {
             tunnels.push({
-                remotePort: tunnel.remotePort.current.value,
-                localPort: tunnel.localPort.current.value,
-                remoteHost: tunnel.remoteHost.current.value
+                remotePort: tunnel.remotePort,
+                localPort: tunnel.localPort,
+                remoteHost: tunnel.remoteHost
               })
           }
         }
+        newSetup.tunnels = tunnels;
       }
 
       setups.push(newSetup);
@@ -186,13 +204,13 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
       <div>
         {
           tunnelForms.map((tunnel) =>
-            <div style={sliceStyle}>
+            <div key={tunnel.id} style={sliceStyle}>
               <label>Source port</label>
-              <input ref={tunnel.localPort}/>
+              <input id={tunnel.id} onChange={handleTunnelLPChange} />
               <label>Destination</label>
-              <input ref={tunnel.remoteHost}/>
+              <input id={tunnel.id} onChange={handleTunnelRHChange}/>
               <label>Destination port</label>
-              <input ref={tunnel.remotePort}/>
+              <input id={tunnel.id} onChange={handleTunnelRPChange}/>
             </div>
           )
         }
@@ -224,13 +242,11 @@ module.exports = (React, eventDispatch, sshMenuConfig, saveConfig) => {
     // Build ssh command
     if (sshSetup && sshSetup.host) {
       let cmd = 'ssh';
-
       if (sshSetup.tunnels) {
         for (let tunnel of sshSetup.tunnels) {
           cmd += ' ' + addTunnel(tunnel);
         }
       }
-
       cmd += ' ' + addHost(sshSetup);
       cmds.push(cmd);
     }

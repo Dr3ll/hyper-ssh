@@ -39,6 +39,24 @@ exports.decorateMenu = menu => menu.map(item => {
 
 let eventDispatch = {};
 
+exports.decorateConfig = (config) => {
+  return Object.assign({}, config,
+    {
+      css: `
+      .hyper-putty-base {
+        position: absolute;
+        top: 34px;
+        bottom: 0;
+        right: 0;
+        width: 300px;
+        background: rgba(255, 255, 255, .04);
+        font-family: ${config.fontFamily};
+      }
+      
+  `}
+  );
+};
+
 exports.decorateHyper = (Hyper, _ref) => {
   let {
     React
